@@ -251,6 +251,29 @@ void DeleteAtlRegistrar ()
 	SHDeleteKey (HKEY_CURRENT_USER, delclsid);
 }
 
+void GetWindowsError()
+{
+  DWORD	  dwError = GetLastError() ;
+  LPTSTR  errorText = NULL;
+
+  FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
+                NULL,
+                dwError,
+                MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                (LPTSTR)&errorText,
+                0,
+                NULL) ;   // arguments - see note
+
+  if ( NULL != errorText )
+  {
+    printf("Windows Error\n%s\n", errorText) ;
+
+    // release memory allocated by FormatMessage()
+    LocalFree(errorText);
+    errorText = NULL;
+  }
+}
+
 int injectexe(char* parm)
 {
 
@@ -272,10 +295,10 @@ int injectexe(char* parm)
 
 	// Build a command line for the server & make sure we can find it and initialize for the remote thread
 	char cmdline [MAX_PATH];
-	strcpy (cmdline, comname);
+	  strcpy (cmdline, comname);
 
-	strcat (cmdline, " ");
-	strcat (cmdline, parm);
+	  strcat (cmdline, " ");
+	  strcat (cmdline, parm);
 	// Some ATL servers are services so we may have put -service in the command line, however this will cause
 	// a service to be created which RegOverridePredefKey will not circumvent.
 	if (0)
@@ -320,19 +343,27 @@ cleanup:
 	parms.hProcThread = hProcThread;
 	// This code does not clean up absoltely everything, relying instead on process termination to
 	// clean up handles and memory
-	const int cbCodeSize = (BYTE*)AfterThreadProc - (BYTE*)ThreadProc;
+	int cbCodeSize = (BYTE*)AfterThreadProc - (BYTE*)ThreadProc;
+	if ( cbCodeSize < 0 )
+	{
+	  // There is no guarantee that the linker will place the functions in the order that they are in the file.
+	  // I have counter 275 bytes in the function ThreadProc. Let's hope that 1000 is enough.
+	  cbCodeSize = 1000 ;
+	}
 
 	pcode = VirtualAllocEx (pi.hProcess, 0, cbCodeSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	// The process was created suspended and has done very little.
 	// TerminateProcess is unfriendly but should be safe under these circumstances
 	if (0==pcode)
 	{
+		GetWindowsError() ;
 		MessageBox (NULL, "Allocate code memory in process", cmdline, MB_OK);
 		goto cleanup;
 	}
 	pdata = VirtualAllocEx (pi.hProcess, 0, sizeof (parms), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 	if (0==pdata)
 	{
+		GetWindowsError() ;
 		MessageBox (NULL, "Allocate data memory in process", cmdline, MB_OK);
 		goto cleanup;
 	}
@@ -568,13 +599,16 @@ int main(int argc, char* argv[])
 	if ( argc <= 1 )
 	{
 		printf ( "Usage:\n") ;
-		printf ( "Regspy <COM Component>" ) ;
+		printf ( "Regspy <COM Component> [<exe-parameter>]" ) ;
+		printf ( "  <exe-parameter> is passed as a command line parameter if <COM component> is an .exe files.\n" ) ;
+		printf ( "  The default value is -regserver\n" ) ;
+		printf ( "  It is not used for DLL/OCX components.\n" ) ;
 		return 1;
 	}
 
 	// Get path, file name
 	strcpy (comname, argv[1]);
-	if (argc > 2)
+	if ( argc > 2 )
 		strcpy (exeparm, argv[2]);
 	else
 		strcpy (exeparm, "-regserver");
@@ -611,12 +645,12 @@ int main(int argc, char* argv[])
 
 	char *pdest;
 	pdest = strstr (comname, ".exe");
-	if (pdest!=NULL)
-	{
-		retval = injectexe(exeparm);
-	}
-	else
-		retval = DoDll();
+	  if (pdest!=NULL)
+	  {
+		  retval = injectexe(exeparm);
+	  }
+	  else
+		  retval = DoDll();
 
 	char chrRootKey[MAX_PATH];
 
