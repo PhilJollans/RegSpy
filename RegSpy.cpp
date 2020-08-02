@@ -251,10 +251,10 @@ void DeleteAtlRegistrar ()
 	SHDeleteKey (HKEY_CURRENT_USER, delclsid);
 }
 
-void GetWindowsError()
+string WindowsErrorText ( DWORD dwError )
 {
-  DWORD	  dwError = GetLastError() ;
   LPTSTR  errorText = NULL;
+  string  result ;
 
   FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
                 NULL,
@@ -266,12 +266,21 @@ void GetWindowsError()
 
   if ( NULL != errorText )
   {
-    printf("Windows Error\n%s\n", errorText) ;
+	result = errorText ;
 
     // release memory allocated by FormatMessage()
     LocalFree(errorText);
     errorText = NULL;
   }
+
+  return result ;
+}
+
+void GetWindowsError()
+{
+  DWORD	  dwError = GetLastError() ;
+  string  errorText = WindowsErrorText ( dwError ) ;
+  printf ( "Windows Error\n%s\n", errorText.c_str() ) ;
 }
 
 int injectexe(char* parm)
@@ -433,10 +442,12 @@ int DoDll()
 
 		if (FAILED(regResult))
 		{
-			printf ( "DllRegisterServer failed with HRESULT 0x%08X", regResult ) ;
+			string regErrorText = WindowsErrorText(regResult) ;
+
+			printf ( "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
 
 			char  buf[1000] ;
-			sprintf ( buf, "DllRegisterServer failed with HRESULT 0x%08X", regResult ) ;
+			sprintf ( buf, "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
 			MessageBox (NULL, buf, comname, MB_OK);
 		}
 
