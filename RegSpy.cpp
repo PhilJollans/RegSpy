@@ -16,6 +16,7 @@
 #include <commdlg.h>
 #include <iostream>
 #include <string>
+#include "rgsymlnk.h"
 
 using namespace std;
 
@@ -423,9 +424,14 @@ int DoDll()
 		MessageBox (NULL, "Can't Find", comname, MB_OK);
 		return 1;
 	}
+
 	HKEY hklm = 0;
 	HKEY hkcr = 0;
+	HKEY hklm_sw = 0;
+	HKEY hklm_link = 0;
+
 	DWORD dwr=0;
+
 	// Find DllregisterServer, prepare to call it
 	ProcDllReg DLLRegisterServer = (ProcDllReg)::GetProcAddress(hMod,"DllRegisterServer" ) ;
 	if (DLLRegisterServer != NULL)
@@ -435,6 +441,14 @@ int DoDll()
 
 		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
 		lc = RegOverridePredefKey (HKEY_LOCAL_MACHINE, hklm);
+
+		// Create a symbolic link from <keylm>\Software\Classes to <keycr>
+		string keylm_software_classes = string (keylm) + "\\Software\\Classes";
+		lc = RegCreateKeyEx( hklm, "Software", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm_sw, &dwr ) ;
+		lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L ) ;
+		lc = CreateSymLinkKey ( HKEY_CURRENT_USER, keylm_software_classes.c_str(), &hklm_link, 0 ) ;
+		lc = SetSymLink ( hklm_link, HKEY_CURRENT_USER, keycr, 0 ) ;
+
 		CoInitialize (NULL);	// Someone has to call this
 		ProcDllReg DLLRegisterServer =
 		  (ProcDllReg)::GetProcAddress(hMod,"DllRegisterServer" ) ;
@@ -450,6 +464,10 @@ int DoDll()
 			sprintf ( buf, "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
 			MessageBox (NULL, buf, comname, MB_OK);
 		}
+
+		// Delete the symbolic link and the Software key
+		lc = DeleteSymLink ( HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
+		lc = RegDeleteKey ( hklm, "Software" ) ;
 
 		RegOverridePredefKey (HKEY_CLASSES_ROOT, NULL);
 		RegOverridePredefKey (HKEY_LOCAL_MACHINE, NULL);
