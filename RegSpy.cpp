@@ -599,7 +599,7 @@ int main(int argc, char* argv[])
 	if ( argc <= 1 )
 	{
 		printf ( "Usage:\n") ;
-		printf ( "Regspy <COM Component> [<exe-parameter>]" ) ;
+		printf ( "Regspy <COM Component> [<exe-parameter>]\n" ) ;
 		printf ( "  <exe-parameter> is passed as a command line parameter if <COM component> is an .exe files.\n" ) ;
 		printf ( "  The default value is -regserver\n" ) ;
 		printf ( "  It is not used for DLL/OCX components.\n" ) ;
