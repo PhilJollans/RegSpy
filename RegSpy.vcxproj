@@ -74,6 +74,7 @@
       <ProgramDatabaseFile>.\Debug/RegSpy.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
     <Midl>
       <TypeLibraryName>.\Debug/RegSpy.tlb</TypeLibraryName>
@@ -108,6 +109,7 @@
       <ProgramDatabaseFile>.\Release/RegSpy.pdb</ProgramDatabaseFile>
       <SubSystem>Console</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
+      <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
     </Link>
     <Midl>
       <TypeLibraryName>.\Release/RegSpy.tlb</TypeLibraryName>
