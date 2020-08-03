@@ -642,22 +642,17 @@ int main(int argc, char* argv[])
 	else
 		strcpy (exeparm, "-regserver");
 
-	// Split the filename and build a new name for the .reg file
-	char drive	[_MAX_DRIVE] = { 0 };
-	char dir	[_MAX_PATH]  = { 0 };
-	char fname	[_MAX_FNAME] = { 0 };
-	char ext	[_MAX_EXT]   = { 0 };
-	char regname[_MAX_PATH]  = { 0 };
-
-	_splitpath ( comname, drive, dir, fname, ext ) ;
-	_makepath ( regname, drive, dir, fname, ".reg" ) ;
+	// Generate an output filename, simply by adding .reg to the original name.
+	// For exampls scrrun.dll would become scrrun.dll.reg
+	string strComponentName ( comname ) ;
+	string strRegName = strComponentName + ".reg" ;
 
 	// Open the output file
-	FILE* pFile = fopen ( regname, "w+" ) ;
+	FILE* pFile = fopen ( strRegName.c_str(), "w+" ) ;
 
 	if ( pFile == NULL )
 	{
-	  printf ( "Failed to open output file %s\n", regname ) ;
+	  printf ( "Failed to open output file %s\n", strRegName.c_str() ) ;
 	  return 1 ;
 	}
 
@@ -709,7 +704,7 @@ int main(int argc, char* argv[])
 	fclose ( pFile ) ;
 	pFile = NULL ;
 
-	printf ( "Reg file created: %s\n", regname ) ;
+	printf ( "Reg file created: %s\n", strRegName.c_str()) ;
 
 	return retval;
 }
