@@ -393,8 +393,26 @@ cleanup:
 		goto cleanup;
 	}
 
-	// At this point in time we're ready to set up the substitute registry entries
+	HKEY  hklm      = 0;
+	HKEY  hkcr      = 0;
+	HKEY  hklm_sw   = 0;
+	HKEY  hklm_link = 0;
+	long  lc;
 
+	// It is easier if we create the temporary keys here, even if we have to call
+	// RegOverridePredefKey in the context of the other process.
+	// They would get created in CreateAtlRegistrar() anyway.
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
+
+	// Create a symbolic link from <keylm>\Software\Classes to <keycr>
+	string keylm_software_classes = string (keylm) + "\\Software\\Classes";
+	lc = RegCreateKeyEx(hklm, "Software", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm_sw, &dwr);
+	lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
+	lc = CreateSymLinkKey (HKEY_CURRENT_USER, keylm_software_classes.c_str(), &hklm_link, 0);
+	lc = SetSymLink (hklm_link, HKEY_CURRENT_USER, keycr, 0);
+
+	// At this point in time we're ready to set up the substitute registry entries
 	CreateAtlRegistrar();
 
 	// Let the remote thread go
@@ -407,10 +425,15 @@ cleanup:
 	CloseHandle (pi.hProcess);
 	WaitForSingleObject (ht, 10000);
 	CloseHandle (ht);
+
+	// Delete the symbolic link and the Software key
+	lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
+	lc = RegDeleteKey (hklm, "Software");
+
 	// Delete the ATL Registrar key we put in the substitute
 	DeleteAtlRegistrar();
-	return 1;
 
+	return 1;
 }
 
 int DoDll()
@@ -425,18 +448,18 @@ int DoDll()
 		return 1;
 	}
 
-	HKEY hklm = 0;
-	HKEY hkcr = 0;
-	HKEY hklm_sw = 0;
-	HKEY hklm_link = 0;
-
-	DWORD dwr=0;
+	HKEY  hklm      = 0;
+	HKEY  hkcr      = 0;
+	HKEY  hklm_sw   = 0;
+	HKEY  hklm_link = 0;
+	DWORD dwr       = 0;
+	long  lc;
 
 	// Find DllregisterServer, prepare to call it
 	ProcDllReg DLLRegisterServer = (ProcDllReg)::GetProcAddress(hMod,"DllRegisterServer" ) ;
 	if (DLLRegisterServer != NULL)
     {
-		long lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
 		lc = RegOverridePredefKey (HKEY_CLASSES_ROOT, hkcr);
 
 		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
