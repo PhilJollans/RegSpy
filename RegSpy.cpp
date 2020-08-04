@@ -235,7 +235,7 @@ void CreateAtlRegistrar ()
 		//Write Clsid to our substitute HKCR
 		lr = RegCreateKeyEx (HKEY_CURRENT_USER, clsid, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkclsid, &dwr);
 		// Set the InprocServer32 key value
-		lr = RegSetValueEx (hkclsid, NULL, 0, REG_SZ, (BYTE*)locatl, dwsz);
+		lr = RegSetValueEx (hkclsid, NULL, 0, REG_EXPAND_SZ, (BYTE*)locatl, dwsz);
 		//Get and set the ThreadingModel
 		lr = RegQueryValueEx (hkatl, "ThreadingModel", NULL, &dwt, (BYTE*)locatl, &dwsz);
 		lr = RegSetValueEx (hkclsid, "ThreadingModel", 0, REG_SZ, (BYTE*)locatl, dwsz);
