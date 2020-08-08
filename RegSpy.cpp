@@ -66,7 +66,14 @@ string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
 	// allow me to do anything but print out his documentation and make a paper
 	// airplane out of it so this should be allowed.
 
-	CString s; // <-- JJB:  Sorry.
+	// Phil: I have replaced (MFC) CString with CStdString, whichis now on GitHub
+	// https://github.com/lunakid/CStdString
+	//
+	// C++20 is introducing a method std::format()
+	// https://en.cppreference.com/w/cpp/utility/format/format
+	// which may be a better alternative, but it is not yet supported by Microsoft C++.
+
+    CStdString s ;
 
 	// conversion from number to string
 	if ( (dwType>=REG_BINARY && dwType<=REG_DWORD_BIG_ENDIAN) ||
@@ -80,7 +87,7 @@ string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
 			case REG_RESOURCE_LIST :
 			case REG_RESOURCE_REQUIREMENTS_LIST :
 			{
-				CString sByte;
+				CStdString sByte;
 				for (int i=0; i<(long)nLen; i++)
 				{
 					byte c = szRawBuffer[i];
@@ -98,7 +105,7 @@ string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
 				byte d = szRawBuffer[0];
 				s.Format(_T("0x%02x%02x%02x%02x"), a, b, c, d);
 				DWORD n = (a<<24) | (b<<16) | (c<<8) | d;
-				CString sDword;
+				CStdString sDword;
 				sDword.Format(_T(" (%d)"), n);
 				s += sDword;
 			}
@@ -111,7 +118,7 @@ string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
 				byte d = szRawBuffer[3];
 				s.Format(_T("0x%02x%02x%02x%02x"), a, b, c, d);
 				DWORD n = (a<<24) | (b<<16) | (c<<8) | d;
-				CString sDword;
+				CStdString sDword;
 				sDword.Format(_T(" (%d)"), n);
 				s += sDword;
 			}
@@ -176,9 +183,8 @@ string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
 
 	}
 
-	// JJB:  I have a "thing" for std::base_string... it's my string of choice.
-	std::string strRet((LPCTSTR)s);
-	return (strRet);
+	// Since CStdString is based on std::base_string we can return it directly
+	return (s);
 }
 
 
