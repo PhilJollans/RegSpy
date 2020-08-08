@@ -23,7 +23,7 @@ using namespace std;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 
-typedef HINSTANCE (WINAPI *ProcLoadLibrary)(char*);
+typedef HINSTANCE (WINAPI *ProcLoadLibrary)(const char*);
 typedef FARPROC (WINAPI *ProcGetProcAddress)(HMODULE, LPCSTR);
 typedef HRESULT (STDAPICALLTYPE *ProcDllReg)() ;
 typedef DWORD  (STDAPICALLTYPE *ProcWaitForS)(HANDLE, DWORD);
@@ -32,35 +32,36 @@ typedef long (STDAPICALLTYPE *RegCreate) (HKEY, LPCTSTR, DWORD, LPTSTR, DWORD, R
 typedef DWORD (WINAPI* ProcResume)(HANDLE);
 
 
-char keycr [MAX_PATH] = {"Software\\Substitute\\Registry\\"};
-char keylm [MAX_PATH] = {"Software\\Substitute\\Registry\\"};
+const string substituteKey ( "Software\\Substitute\\Registry\\" ) ;
+string keycr ;
+string keylm ;
 
 // JJB:  Sloppy global counter.
 int g_currLevel = 0;
 
 char shortname [MAX_PATH] = {0};
-char comname [MAX_PATH] = {0};
-char exeparm [MAX_PATH] = {0};
+string comname ;
+string exeparm ;
 
-typedef struct parmstag {
-	char kcr [MAX_PATH];
-	char klm [MAX_PATH];
-	ProcLoadLibrary	fnload;
-	ProcGetProcAddress fnGetProc;
-	ProcResume fnResume;
-	ProcWaitForS fnWaitFor;
-	char advdll [MAX_PATH];
-	char regover [MAX_PATH];
-	char regcreate [MAX_PATH];
-	HANDLE hProcThread;
-
+typedef struct parmstag
+{
+  char               kcr [MAX_PATH];
+  char               klm [MAX_PATH];
+  ProcLoadLibrary	 fnload;
+  ProcGetProcAddress fnGetProc;
+  ProcResume         fnResume;
+  ProcWaitForS       fnWaitFor;
+  char               advdll [MAX_PATH];
+  char               regover [MAX_PATH];
+  char               regcreate [MAX_PATH];
+  HANDLE             hProcThread;
 } myparms;
 
 myparms parms;
 
 #pragma check_stack (off)
 
-string ConvertToString(DWORD dwType, LPTSTR szRawBuffer, DWORD nLen)
+string ConvertToString ( DWORD dwType, LPTSTR szRawBuffer, DWORD nLen )
 {
 	// JJB:  Yep, I stole this from 'regxml'.  The author's copyright seems to
 	// allow me to do anything but print out his documentation and make a paper
@@ -219,43 +220,42 @@ static void AfterThreadProc (void) { }
 
 void CreateAtlRegistrar ()
 {
-	// We're going to look for the ATL Registrar in case it's need for our server to register, and if it's there we'll
-	// copy the key data to our subsitute HKCR key.
-	HKEY hkatl;
-	long lr = RegOpenKeyEx (HKEY_CLASSES_ROOT, "CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}\\InprocServer32", 0, KEY_READ, &hkatl);
-	if (ERROR_FILE_NOT_FOUND==lr){
-		MessageBox (NULL, "Unable to find ATL Registrar - Registration Might Fail", "Warning", MB_OK);
-	}
-	else
-	{
-		char clsid [MAX_PATH];
-		char locatl [MAX_PATH];
-		strcpy (clsid, keycr);	// The HKCR substitute
-		strcat (clsid, "\\CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}\\InprocServer32");
-		// We'll assume in here that all the ATL.DLL registry entries are present
-		DWORD dwsz = sizeof (locatl);
-		DWORD dwt = REG_SZ;
-		lr = RegQueryValueEx (hkatl, NULL, NULL, &dwt, (BYTE*)locatl, &dwsz);		// Path to Dll
-		HKEY hkclsid;
-		DWORD dwr;
-		//Write Clsid to our substitute HKCR
-		lr = RegCreateKeyEx (HKEY_CURRENT_USER, clsid, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkclsid, &dwr);
-		// Set the InprocServer32 key value
-		lr = RegSetValueEx (hkclsid, NULL, 0, REG_EXPAND_SZ, (BYTE*)locatl, dwsz);
-		//Get and set the ThreadingModel
-		lr = RegQueryValueEx (hkatl, "ThreadingModel", NULL, &dwt, (BYTE*)locatl, &dwsz);
-		lr = RegSetValueEx (hkclsid, "ThreadingModel", 0, REG_SZ, (BYTE*)locatl, dwsz);
-		RegCloseKey (hkatl);
-		RegCloseKey (hkclsid);
-	}
+  // We're going to look for the ATL Registrar in case it's need for our server to register, and if it's there we'll
+  // copy the key data to our subsitute HKCR key.
+  HKEY hkatl;
+  long lr = RegOpenKeyEx (HKEY_CLASSES_ROOT, "CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}\\InprocServer32", 0, KEY_READ, &hkatl);
+  if (ERROR_FILE_NOT_FOUND == lr) {
+    MessageBox (NULL, "Unable to find ATL Registrar - Registration Might Fail", "Warning", MB_OK);
+  }
+  else
+  {
+	char locatl[MAX_PATH];
+
+	// The HKCR substitute
+	string clsid = keycr + "\\CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}\\InprocServer32" ;
+
+    // We'll assume in here that all the ATL.DLL registry entries are present
+    DWORD dwsz = sizeof (locatl);
+    DWORD dwt = REG_SZ;
+    lr = RegQueryValueEx (hkatl, NULL, NULL, &dwt, (BYTE*)locatl, &dwsz);		// Path to Dll
+    HKEY hkclsid;
+    DWORD dwr;
+    //Write Clsid to our substitute HKCR
+    lr = RegCreateKeyEx (HKEY_CURRENT_USER, clsid.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkclsid, &dwr);
+    // Set the InprocServer32 key value
+    lr = RegSetValueEx (hkclsid, NULL, 0, REG_EXPAND_SZ, (BYTE*)locatl, dwsz);
+    //Get and set the ThreadingModel
+    lr = RegQueryValueEx (hkatl, "ThreadingModel", NULL, &dwt, (BYTE*)locatl, &dwsz);
+    lr = RegSetValueEx (hkclsid, "ThreadingModel", 0, REG_SZ, (BYTE*)locatl, dwsz);
+    RegCloseKey (hkatl);
+    RegCloseKey (hkclsid);
+  }
 }
 
 void DeleteAtlRegistrar ()
 {
-	char delclsid [MAX_PATH];
-	strcpy (delclsid, keycr);
-	strcat (delclsid, "\\CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}");
-	SHDeleteKey (HKEY_CURRENT_USER, delclsid);
+	string delclsid = keycr + "\\CLSID\\{44EC053A-400F-11D0-9DCD-00A0C90391D3}" ;
+	SHDeleteKey ( HKEY_CURRENT_USER, delclsid.c_str() ) ;
 }
 
 string WindowsErrorText ( DWORD dwError )
@@ -290,31 +290,39 @@ void GetWindowsError()
   printf ( "Windows Error\n%s\n", errorText.c_str() ) ;
 }
 
-int injectexe(char* parm)
+int injectexe ( string parm )
 {
 
 	// Copy the keys to the structure that we'll send to our remote thread
-	strcpy (parms.kcr, keycr);
-	strcpy (parms.klm, keylm);
+	strcpy_s ( parms.kcr, _countof(parms.kcr), keycr.c_str() );
+	strcpy_s ( parms.klm, _countof(parms.klm), keylm.c_str() );
 
 	// GetProcAddress values for the functions that our remote thread will call.
-	HMODULE hk = LoadLibrary ("kernel32.dll");
-	parms.fnload = (ProcLoadLibrary)::GetProcAddress (hk, "LoadLibraryA");
+	HMODULE hk      = LoadLibrary ("kernel32.dll");
+
+	if ( hk == NULL )
+	{
+	  GetWindowsError() ;
+	  return 1 ;
+	}
+
+	parms.fnload    = (ProcLoadLibrary)::GetProcAddress (hk, "LoadLibraryA");
 	parms.fnGetProc = (ProcGetProcAddress)::GetProcAddress (hk, "GetProcAddress");
-	parms.fnResume = (ProcResume)::GetProcAddress(hk, "ResumeThread");
+	parms.fnResume  = (ProcResume)::GetProcAddress(hk, "ResumeThread");
 	parms.fnWaitFor = (ProcWaitForS)::GetProcAddress (hk, "WaitForSingleObject");
-	strcpy (parms.advdll, "advapi32.dll");
+	strcpy_s (parms.advdll, _countof(parms.advdll), "advapi32.dll");
 
 	// The Regxxx functions are in advapi32.dll which we'll load in our remote thread
-	strcpy (parms.regcreate, "RegCreateKeyExA");
-	strcpy (parms.regover, "RegOverridePredefKey");
+	strcpy_s (parms.regcreate, _countof(parms.regcreate), "RegCreateKeyExA");
+	strcpy_s (parms.regover, _countof(parms.regover), "RegOverridePredefKey");
 
 	// Build a command line for the server & make sure we can find it and initialize for the remote thread
 	char cmdline [MAX_PATH];
-	  strcpy (cmdline, comname);
 
-	  strcat (cmdline, " ");
-	  strcat (cmdline, parm);
+	strcpy_s ( cmdline, _countof(cmdline), comname.c_str() ) ;
+	strcat_s ( cmdline, _countof(cmdline), " " ) ;
+	strcat_s ( cmdline, _countof(cmdline), parm.c_str() ) ;
+
 	// Some ATL servers are services so we may have put -service in the command line, however this will cause
 	// a service to be created which RegOverridePredefKey will not circumvent.
 	if (0)
@@ -408,15 +416,15 @@ cleanup:
 	// It is easier if we create the temporary keys here, even if we have to call
 	// RegOverridePredefKey in the context of the other process.
 	// They would get created in CreateAtlRegistrar() anyway.
-	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
-	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
 
 	// Create a symbolic link from <keylm>\Software\Classes to <keycr>
-	string keylm_software_classes = string (keylm) + "\\Software\\Classes";
+	string keylm_software_classes = keylm + "\\Software\\Classes";
 	lc = RegCreateKeyEx(hklm, "Software", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm_sw, &dwr);
 	lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
 	lc = CreateSymLinkKey (HKEY_CURRENT_USER, keylm_software_classes.c_str(), &hklm_link, 0);
-	lc = SetSymLink (hklm_link, HKEY_CURRENT_USER, keycr, 0);
+	lc = SetSymLink (hklm_link, HKEY_CURRENT_USER, keycr.c_str(), 0);
 
 	// At this point in time we're ready to set up the substitute registry entries
 	CreateAtlRegistrar();
@@ -425,12 +433,21 @@ cleanup:
 	// JJB:  This throws a dialog box with a "File Not Found" error it in that I can't trace down.
 	// Many thanks to somebody who can fix this or explain it to me.
 	HANDLE ht = CreateRemoteThread (pi.hProcess, NULL, 0, (LPTHREAD_START_ROUTINE)pcode, pdata, 0, NULL);
+	if ( ht == NULL )
+	{
+	  GetWindowsError() ;
+	}
+
 	long gle = GetLastError();
 	dwr = WaitForSingleObject (pi.hThread, INFINITE);
 	CloseHandle (pi.hThread);
 	CloseHandle (pi.hProcess);
-	WaitForSingleObject (ht, 10000);
-	CloseHandle (ht);
+
+	if ( ht != NULL )
+	{
+	  WaitForSingleObject (ht, 10000);
+	  CloseHandle (ht);
+	}
 
 	// Delete the symbolic link and the Software key
 	lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
@@ -448,9 +465,9 @@ int DoDll()
 	// copy the key data to our subsitute HKCR key.
 	CreateAtlRegistrar();
 
-	HMODULE hMod = ::LoadLibrary (comname);
+	HMODULE hMod = ::LoadLibrary ( comname.c_str() );
 	if (NULL==hMod){
-		MessageBox (NULL, "Can't Find", comname, MB_OK);
+		MessageBox (NULL, "Can't Find", comname.c_str(), MB_OK);
 		return 1;
 	}
 
@@ -465,20 +482,20 @@ int DoDll()
 	ProcDllReg DLLRegisterServer = (ProcDllReg)::GetProcAddress(hMod,"DllRegisterServer" ) ;
 	if (DLLRegisterServer != NULL)
     {
-		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
 		lc = RegOverridePredefKey (HKEY_CLASSES_ROOT, hkcr);
 
-		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
+		lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
 		lc = RegOverridePredefKey (HKEY_LOCAL_MACHINE, hklm);
 
 		// Create a symbolic link from <keylm>\Software\Classes to <keycr>
-		string keylm_software_classes = string (keylm) + "\\Software\\Classes";
+		string keylm_software_classes = keylm + "\\Software\\Classes";
 		lc = RegCreateKeyEx( hklm, "Software", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm_sw, &dwr ) ;
 		lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L ) ;
 		lc = CreateSymLinkKey ( HKEY_CURRENT_USER, keylm_software_classes.c_str(), &hklm_link, 0 ) ;
-		lc = SetSymLink ( hklm_link, HKEY_CURRENT_USER, keycr, 0 ) ;
+		lc = SetSymLink ( hklm_link, HKEY_CURRENT_USER, keycr.c_str(), 0 ) ;
 
-		CoInitialize (NULL);	// Someone has to call this
+		HRESULT hr = CoInitialize (NULL);	// Someone has to call this
 		ProcDllReg DLLRegisterServer =
 		  (ProcDllReg)::GetProcAddress(hMod,"DllRegisterServer" ) ;
 		HRESULT regResult = DLLRegisterServer() ;
@@ -489,9 +506,9 @@ int DoDll()
 
 			printf ( "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
 
-			char  buf[1000] ;
-			sprintf ( buf, "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
-			MessageBox (NULL, buf, comname, MB_OK);
+			CStdString	buf ;
+			buf.Format ( "DllRegisterServer failed with HRESULT 0x%08X, %s", regResult, regErrorText.c_str() ) ;
+			MessageBox ( NULL, buf.c_str(), comname.c_str(), MB_OK ) ;
 		}
 
 		// Delete the symbolic link and the Software key
@@ -504,7 +521,7 @@ int DoDll()
 		RegCloseKey (hklm);
 	}
 	else {
-		MessageBox (NULL, "DllRegisterServer Not Exported", comname, MB_OK);
+		MessageBox (NULL, "DllRegisterServer Not Exported", comname.c_str(), MB_OK);
 	}
 	// Delete the ATL Registrar key we put in the substitute
 	DeleteAtlRegistrar();
@@ -514,134 +531,137 @@ int DoDll()
 }
 
 
-void ExportKey(HKEY hKey, char chrPrefix[MAX_PATH], char chrOrigKey[MAX_PATH], FILE* pFile )
+void ExportKey (HKEY hKey, string chrPrefix, string chrOrigKey, FILE* pFile)
 {
-	// JJB:  I also stole the bulk of this from the 'regxml' project.
+  // JJB:  I also stole the bulk of this from the 'regxml' project.
 
-	CHAR     achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-    DWORD    cbName;                   // size of name string
-    CHAR     achClass[MAX_PATH] = "";  // buffer for class name
-    DWORD    cchClassName = MAX_PATH;  // size of class string
-    DWORD    cSubKeys=0;               // number of subkeys
-    DWORD    cbMaxSubKey;              // longest subkey size
-    DWORD    cchMaxClass;              // longest class string
-    DWORD    cValues;              // number of values for key
-    DWORD    cchMaxValue;          // longest value name
-    DWORD    cbMaxValueData;       // longest value data
-    DWORD    cbSecurityDescriptor; // size of security descriptor
-    FILETIME ftLastWriteTime;      // last write time
+  CHAR     achKey[MAX_KEY_LENGTH];    // buffer for subkey name
+  DWORD    cbName;                    // size of name string
+  CHAR     achClass[MAX_PATH] = "";   // buffer for class name
+  DWORD    cchClassName = MAX_PATH;   // size of class string
+  DWORD    cSubKeys = 0;              // number of subkeys
+  DWORD    cbMaxSubKey;               // longest subkey size
+  DWORD    cchMaxClass;               // longest class string
+  DWORD    cValues;					  // number of values for key
+  DWORD    cchMaxValue;				  // longest value name
+  DWORD    cbMaxValueData;			  // longest value data
+  DWORD    cbSecurityDescriptor;	  // size of security descriptor
+  FILETIME ftLastWriteTime;			  // last write time
 
-    DWORD i, retCode;
+  DWORD	   i ;
+  DWORD	   retCode ;
 
-    CHAR  achValue[MAX_VALUE_NAME];
-    DWORD cchValue = MAX_VALUE_NAME;
+  // Get the class name and the value count.
+  retCode = RegQueryInfoKey ( hKey,                    // key handle
+							  achClass,                // buffer for class name
+							  &cchClassName,           // size of class string
+							  NULL,                    // reserved
+							  &cSubKeys,               // number of subkeys
+							  &cbMaxSubKey,            // longest subkey size
+							  &cchMaxClass,            // longest class string
+							  &cValues,                // number of values for this key
+							  &cchMaxValue,            // longest value name
+							  &cbMaxValueData,         // longest value data
+							  &cbSecurityDescriptor,   // security descriptor
+							  &ftLastWriteTime ) ;     // last write time
 
+  // JJB:  Here's that sloppy global variable again.
+  // I decided that we didn't need to put [HKEY_LOCAL_MACHINE] and
+  // [HKEY_CLASSES_ROOT] into the export file because they're most definately
+  // already in your registry.
+  // I decided this because it freaking blows up on import if you redefine
+  // [HKEY_CLASSES_ROOT] so there wasn't much decision in my "choice".
+  if (g_currLevel != 0)
+    fprintf (pFile, "[%s]\n", chrPrefix.c_str());
 
-	// Get the class name and the value count.
-    retCode = RegQueryInfoKey(
-        hKey,                    // key handle
-        achClass,                // buffer for class name
-        &cchClassName,           // size of class string
-        NULL,                    // reserved
-        &cSubKeys,               // number of subkeys
-        &cbMaxSubKey,            // longest subkey size
-        &cchMaxClass,            // longest class string
-        &cValues,                // number of values for this key
-        &cchMaxValue,            // longest value name
-        &cbMaxValueData,         // longest value data
-        &cbSecurityDescriptor,   // security descriptor
-        &ftLastWriteTime);       // last write time
+  // Enumerate the key values.
+  if (cValues)
+  {
+	CHAR* achValue = new CHAR[MAX_VALUE_NAME];
+	DWORD cchValue = MAX_VALUE_NAME;
 
-	// JJB:  Here's that sloppy global variable again.
-	// I decided that we didn't need to put [HKEY_LOCAL_MACHINE] and
-	// [HKEY_CLASSES_ROOT] into the export file because they're most definately
-	// already in your registry.
-	// I decided this because it freaking blows up on import if you redefine
-	// [HKEY_CLASSES_ROOT] so there wasn't much decision in my "choice".
-	if (g_currLevel != 0)
-		fprintf ( pFile, "[%s]\n", chrPrefix ) ;
-
-    // Enumerate the key values.
-    if (cValues)
+	for (i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
     {
-        for (i=0, retCode=ERROR_SUCCESS; i<cValues; i++)
-        {
-			cchValue = MAX_VALUE_NAME;
-            achValue[0] = '\0';
-		    BYTE  *achValueData = new BYTE[cbMaxValueData + 1];
-			DWORD dwType;
-			DWORD cchValueData = cbMaxValueData + 1;
+      cchValue    = MAX_VALUE_NAME;
+      achValue[0] = '\0';
 
-			retCode = RegEnumValue(hKey, i,
-                achValue,
-                &cchValue,
-                NULL,
-                &dwType,
-                (LPBYTE) achValueData,
-                &cchValueData);
+      BYTE* achValueData = new BYTE[cbMaxValueData + 1];
+      DWORD dwType;
+      DWORD cchValueData = cbMaxValueData + 1;
 
-            if (retCode == ERROR_SUCCESS)
-            {
-				if (strlen(achValue) == 0)
-					strcpy(achValue, "@");
+      retCode = RegEnumValue ( hKey,
+							   i,
+							   achValue,
+							   &cchValue,
+							   NULL,
+							   &dwType,
+							   (LPBYTE)achValueData,
+							   &cchValueData ) ;
 
-				string strData = ConvertToString(dwType, (LPTSTR) achValueData, cchValueData);
-				// JJB:  In the registry output format you don't put quotes around an @ which stands
-				// for "default value"... but you do for the other properties.  Odd.
-				if (strcmp(achValue, "@") == 0)
-					fprintf ( pFile, "%s=\"%s\"\n", achValue,  strData.c_str() ) ;
-				else
-					fprintf ( pFile,  "\"%s\"=\"%s\"\n", achValue, strData.c_str() ) ;
-			}
-			else
-			{
-				// JJB:  Proper error handling is for people without debuggers.
-				printf("We had an error. Ooops.\n");
-			}
-        }
+      if (retCode == ERROR_SUCCESS)
+      {
+        string strData = ConvertToString ( dwType, (LPTSTR)achValueData, cchValueData ) ;
+
+        // JJB:  In the registry output format you don't put quotes around an @ which stands
+        // for "default value"... but you do for the other properties.  Odd.
+		if ( strlen(achValue) == 0 )
+		{
+		  fprintf (pFile, "@=\"%s\"\n", strData.c_str());
+		}
+		else
+		{
+		  fprintf (pFile, "\"%s\"=\"%s\"\n", achValue, strData.c_str());
+		}
+      }
+      else
+      {
+        // JJB:  Proper error handling is for people without debuggers.
+        printf("We had an error. Ooops.\n");
+      }
     }
 
-	if (g_currLevel != 0)
-		fprintf ( pFile, "\n" ) ;
-	g_currLevel++;
+	// Free the achValue buffer, which is now allocated dynamically.
+	delete[] achValue ;
+  }
 
-	// JJB:  Now that we're listed the key, and all values under that
-	// key it's time to start enumerating the children keys.
+  if (g_currLevel != 0)
+    fprintf (pFile, "\n");
+  g_currLevel++;
 
-	// Enumerate the subkeys, until RegEnumKeyEx fails.
-    if (cSubKeys)
+  // JJB:  Now that we're listed the key, and all values under that
+  // key it's time to start enumerating the children keys.
+
+  // Enumerate the subkeys, until RegEnumKeyEx fails.
+  if (cSubKeys)
+  {
+    for (i = 0; i < cSubKeys; i++)
     {
-        for (i=0; i<cSubKeys; i++)
-        {
-            cbName = MAX_KEY_LENGTH;
-			retCode = RegEnumKeyEx(hKey, i,
-                     achKey,
-                     &cbName,
-                     NULL,
-                     NULL,
-					 NULL,
-                     &ftLastWriteTime);
+      cbName = MAX_KEY_LENGTH;
+      retCode = RegEnumKeyEx(hKey, i,
+        achKey,
+        &cbName,
+        NULL,
+        NULL,
+        NULL,
+        &ftLastWriteTime);
 
-            if (retCode == ERROR_SUCCESS)
-            {
-				// JJB:  No, I don't know why I kept on using char arrays when
-				// writing this.
-				char chrNewPrefix[MAX_PATH];
-				char chrChild[MAX_PATH];
-				strcpy(chrChild, chrOrigKey);
-				strcat(chrChild, "\\");
-				strcat(chrChild, achKey);
+      if (retCode == ERROR_SUCCESS)
+      {
+        // JJB:  No, I don't know why I kept on using char arrays when
+        // writing this.
+        CStdString  chrNewPrefix;
+        string		chrChild = chrOrigKey + "\\" + achKey ;
 
-				long lc;
-				HKEY hkChild;
-				DWORD dwr = 0;
+        long lc;
+        HKEY hkChild;
+        DWORD dwr = 0;
 
-				sprintf(chrNewPrefix, "%s\\%s", chrPrefix, achKey);
-				lc = RegCreateKeyEx (HKEY_CURRENT_USER, chrChild, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkChild, &dwr);
-				ExportKey ( hkChild, chrNewPrefix, chrChild, pFile ) ;
-			}
-        }
+        chrNewPrefix.Format ("%s\\%s", chrPrefix.c_str(), achKey);
+        lc = RegCreateKeyEx (HKEY_CURRENT_USER, chrChild.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkChild, &dwr);
+        ExportKey (hkChild, chrNewPrefix, chrChild, pFile);
+      }
     }
+  }
 
 
 }
@@ -665,19 +685,24 @@ int main(int argc, char* argv[])
 	}
 
 	// Get path, file name
-	strcpy (comname, argv[1]);
+	comname = argv[1] ;
 	if ( argc > 2 )
-		strcpy (exeparm, argv[2]);
+		exeparm = argv[2] ;
 	else
-		strcpy (exeparm, "-regserver");
+		exeparm = "-regserver" ;
 
 	// Generate an output filename, simply by adding .reg to the original name.
 	// For exampls scrrun.dll would become scrrun.dll.reg
-	string strComponentName ( comname ) ;
-	string strRegName = strComponentName + ".reg" ;
+	string strRegName = comname + ".reg" ;
+
+	// MSVC generates a warning for fopen which in my humble opinion is nonsense.
+#pragma warning( push )
+#pragma warning( disable : 4996)
 
 	// Open the output file
 	FILE* pFile = fopen ( strRegName.c_str(), "w+" ) ;
+
+#pragma warning( pop )
 
 	if ( pFile == NULL )
 	{
@@ -685,34 +710,25 @@ int main(int argc, char* argv[])
 	  return 1 ;
 	}
 
-	short stuff = GetFileTitle (comname, shortname, MAX_PATH);
+	short stuff = GetFileTitle ( comname.c_str(), shortname, MAX_PATH ) ;
+
 	// Build our substitute registry keys
-	strcat (keycr, shortname);
-	strcat (keycr, "\\HKCR");
-	strcat (keylm, shortname);
-	strcat (keylm, "\\HKLM");
+	keycr = substituteKey + shortname + "\\HKCR" ;
+	keylm = substituteKey + shortname + "\\HKLM" ;
 
 	// Delete them if they exist - start with a clean slate
-	SHDeleteKey (HKEY_CURRENT_USER, keycr);
-	SHDeleteKey (HKEY_CURRENT_USER, keylm);
+	SHDeleteKey (HKEY_CURRENT_USER, keycr.c_str());
+	SHDeleteKey (HKEY_CURRENT_USER, keylm.c_str());
 
-	char *pdest;
-	pdest = strstr (comname, ".exe");
-	  if (pdest!=NULL)
-	  {
-		  retval = injectexe(exeparm);
-	  }
-	  else
-		  retval = DoDll();
-
-	char chrRootKey[MAX_PATH];
+	if ( comname.find ( ".exe" ) != string::npos )
+      retval = injectexe ( exeparm ) ;
+    else
+      retval = DoDll();
 
 	// JJB:  I tried to make this look as much like a registry export as I could.
 	fprintf ( pFile, "Windows Registry Editor Version 5.00\n\n" ) ;
 
-	strcpy(chrRootKey, "");
-	strcat(chrRootKey, keylm);
-	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
 
 	// JJB: Look inside the ExportKey() function for why I reset this.
 	g_currLevel = 0;
@@ -720,14 +736,12 @@ int main(int argc, char* argv[])
 	// pretend that the values are under 'HKEY_LOCAL_MACHINE'.
 	// the 3rd paramter is the textual value of what hklm points to.  I'm lazy... and this was the
 	// easy way.
-	ExportKey ( hklm, "HKEY_LOCAL_MACHINE", chrRootKey, pFile );
+	ExportKey ( hklm, "HKEY_LOCAL_MACHINE", keylm, pFile );
 
-	strcpy(chrRootKey, "");
-	strcat(chrRootKey, keycr);
-	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr, 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+	lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
 
 	g_currLevel = 0;
-	ExportKey ( hkcr, "HKEY_CLASSES_ROOT", chrRootKey, pFile ) ;
+	ExportKey ( hkcr, "HKEY_CLASSES_ROOT", keycr, pFile ) ;
 
 	// Close the file
 	fclose ( pFile ) ;
