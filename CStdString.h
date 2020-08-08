@@ -1,10 +1,10 @@
-// =============================================================================
+Ôªø// =============================================================================
 //  FILE:  CStdString.h
 //  AUTHOR:	Joe O'Leary (with outside help noted in comments)
 //
 //      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //      This is a "facelifted" version of Joe's original code, made compatible
-//      with C++17 compilers (by Szabolcs Sz·sz, in Aug. 2019).
+//      with C++17 compilers (by Szabolcs Sz√°sz, in Aug. 2019).
 //
 //      The latest version should be available at:
 //              https://github.com/lunakid/CStdString
@@ -62,7 +62,7 @@
 //			- Jim Cline
 //			- Jeff Kohn
 //			- Todd Heckel
-//			- Ullrich Poll‰hne
+//			- Ullrich Poll√§hne
 //			- Joe Vitaterna
 //			- Joe Woodbury
 //			- Aaron (no last name)
@@ -216,7 +216,7 @@
 //	  2000-APR-17 - Thanks to Joe Vitaterna for pointing out that ReverseFind
 //					is supposed to be a const function.
 //
-//	  2000-MAR-07 - Thanks to Ullrich Poll‰hne for catching a range bug in one
+//	  2000-MAR-07 - Thanks to Ullrich Poll√§hne for catching a range bug in one
 //					of the overloads of assign.
 //
 //    2000-FEB-01 - You can now use CStdString on the Mac with CodeWarrior!
@@ -785,7 +785,6 @@ inline const Type& SSMAX(const Type& arg1, const Type& arg2)
 
 /*!!https://stackoverflow.com/questions/50637134/std-use-not-defined
 	#elif defined(_MSC_VER )
-
 		#define SS_USE_FACET(loc, fac) std::_USE(loc, fac)
 */
 	// ...and
@@ -2335,7 +2334,7 @@ public:
 			// <nChars> or the NULL terminator, whichever comes first.  Since we
 			// are about to call a less forgiving overload (in which <nChars>
 			// must be a valid length), we must adjust the length here to a safe
-			// value.  Thanks to Ullrich Poll‰hne for catching this bug
+			// value.  Thanks to Ullrich Poll√§hne for catching this bug
 
 			nChars		= SSMIN(nChars, str.length() - nStart);
 			MYTYPE strTemp(str.c_str()+nStart, nChars);
@@ -2356,7 +2355,7 @@ public:
 			// <nChars> or the NULL terminator, whichever comes first.  Since we
 			// are about to call a less forgiving overload (in which <nChars>
 			// must be a valid length), we must adjust the length here to a safe
-			// value. Thanks to Ullrich Poll‰hne for catching this bug
+			// value. Thanks to Ullrich Poll√§hne for catching this bug
 
 			nChars		= SSMIN(nChars, str.length() - nStart);
 
