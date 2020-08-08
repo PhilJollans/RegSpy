@@ -141,6 +141,8 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CStdString.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="rgsymlnk.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="wow64hlp.h" />
@@ -150,6 +152,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="RegSpy.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
