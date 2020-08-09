@@ -459,6 +459,61 @@ cleanup:
 	return 1;
 }
 
+int DoTlb()
+{
+  HRESULT hr ;
+  HKEY    hklm = 0;
+  HKEY    hkcr = 0;
+  HKEY    hklm_sw = 0;
+  HKEY    hklm_link = 0;
+  DWORD   dwr = 0;
+  long    lc;
+
+  lc = RegCreateKeyEx (HKEY_CURRENT_USER, keycr.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkcr, &dwr);
+  lc = RegOverridePredefKey (HKEY_CLASSES_ROOT, hkcr);
+
+  lc = RegCreateKeyEx (HKEY_CURRENT_USER, keylm.c_str(), 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm, &dwr);
+  lc = RegOverridePredefKey (HKEY_LOCAL_MACHINE, hklm);
+
+  // Create a symbolic link from <keylm>\Software\Classes to <keycr>
+  string keylm_software_classes = keylm + "\\Software\\Classes";
+  lc = RegCreateKeyEx(hklm, "Software", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hklm_sw, &dwr);
+  lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
+  lc = CreateSymLinkKey (HKEY_CURRENT_USER, keylm_software_classes.c_str(), &hklm_link, 0);
+  lc = SetSymLink (hklm_link, HKEY_CURRENT_USER, keycr.c_str(), 0);
+
+  hr = CoInitialize (NULL);	// Someone has to call this
+
+  ITypeLib* pTypeLib;
+  hr = LoadTypeLibEx ( _bstr_t ( comname.c_str() ), REGKIND_REGISTER, &pTypeLib ) ;
+
+  if (SUCCEEDED(hr))
+  {
+	pTypeLib->Release();
+  }
+  else
+  {
+	string regErrorText = WindowsErrorText(hr);
+
+	printf ( "LoadTypeLibEx failed with HRESULT 0x%08X, %s", hr, regErrorText.c_str() ) ;
+
+	CStdString	buf;
+	buf.Format ( "LoadTypeLibEx failed with HRESULT 0x%08X, %s", hr, regErrorText.c_str() ) ;
+	MessageBox (NULL, buf.c_str(), comname.c_str(), MB_OK);
+  }
+
+  // Delete the symbolic link and the Software key
+  lc = DeleteSymLink (HKEY_CURRENT_USER, keylm_software_classes.c_str(), 0L);
+  lc = RegDeleteKey (hklm, "Software");
+
+  RegOverridePredefKey (HKEY_CLASSES_ROOT, NULL);
+  RegOverridePredefKey (HKEY_LOCAL_MACHINE, NULL);
+  RegCloseKey (hkcr);
+  RegCloseKey (hklm);
+
+  return 1;
+}
+
 int DoDll()
 {
 	// We're going to look for the ATL Registrar in case it's need for our server to register, and if it's there we'll
@@ -726,7 +781,9 @@ int main(int argc, char* argv[])
 
 	if ( comname.find ( ".exe" ) != string::npos )
       retval = injectexe ( exeparm ) ;
-    else
+	else if ( comname.find ( ".tlb" ) != string::npos )
+	  retval = DoTlb();
+	else
       retval = DoDll();
 
 	// JJB:  I tried to make this look as much like a registry export as I could.
