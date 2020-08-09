@@ -26,8 +26,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,0
- PRODUCTVERSION 1,0,0,0
+ FILEVERSION 1,00,0,0000
+ PRODUCTVERSION 1,00,0,0000
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -44,12 +44,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Phil Jollans"
             VALUE "FileDescription", "Extract self-reg info from COM dll or exe"
-            VALUE "FileVersion", "1.0.0.0"
+            VALUE "FileVersion", "1.00.0.0000"
             VALUE "InternalName", "RegSpy.exe"
             VALUE "LegalCopyright", "Copyright (C) 2020"
             VALUE "OriginalFilename", "RegSpy.exe"
             VALUE "ProductName", "RegSpy"
-            VALUE "ProductVersion", "1.0.0.0"
+            VALUE "ProductVersion", "1.00.0.0000"
         END
     END
     BLOCK "VarFileInfo"
