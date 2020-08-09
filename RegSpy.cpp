@@ -466,9 +466,13 @@ int DoDll()
 	CreateAtlRegistrar();
 
 	HMODULE hMod = ::LoadLibrary ( comname.c_str() );
-	if (NULL==hMod){
-		MessageBox (NULL, "Can't Find", comname.c_str(), MB_OK);
-		return 1;
+	if ( NULL == hMod )
+	{
+	  CStdString  Message ;
+	  Message.Format ( "Can't load library %s", comname.c_str() ) ;
+
+	  MessageBox ( NULL, Message.c_str(), "RegSpy", MB_OK);
+	  return 1;
 	}
 
 	HKEY  hklm      = 0;
