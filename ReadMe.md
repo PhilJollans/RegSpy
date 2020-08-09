@@ -38,6 +38,11 @@ the class registration (under HKEY_CLASSES_ROOT\CLSID) is generated,
 but the type library registration (under HKEY_CLASSES_ROOT\TypeLib)
 is not generated. At least this seems to be true for ATL/C++ components.
 
+## Download
+
+You can download the 
+[executable file here](https://github.com/PhilJollans/RegSpy/raw/master/RegSpy.exe).
+
 ## Acknowledgments
 
 The original version of RegSpy was written by **Phil Wilson**.  
